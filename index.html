@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Uma Spinning Wheel</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--accent:#06b6d4;--muted:#94a3b8}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#071124 0%, #081229 60%);font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial}
+    .container{width:960px;max-width:95%;display:grid;grid-template-columns:1fr 360px;gap:28px;align-items:center}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));padding:24px;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.03)}
+    h1{margin:0 0 12px;color:#e6eef6;font-size:20px}
+    p{margin:0 0 16px;color:var(--muted)}
+
+    /* Wheel area */
+    .wheel-wrap{display:flex;align-items:center;justify-content:center;position:relative;padding:12px}
+    .wheel-stage{width:520px;height:520px;border-radius:50%;display:grid;place-items:center;position:relative}
+    canvas#wheel{width:100%;height:100%;border-radius:50%;display:block}
+
+    /* Pointer */
+    .pointer{position:absolute;top:12px;left:50%;transform:translateX(50%);width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-bottom:30px solid var(--accent);filter:drop-shadow(0 4px 8px rgba(2,6,23,0.6))}
+
+    /* Controls */
+    .controls{display:flex;flex-direction:column;gap:12px}
+    button{appearance:none;border:0;padding:12px 16px;border-radius:10px;background:linear-gradient(90deg,var(--accent),#7c3aed);color:white;font-weight:600;cursor:pointer;box-shadow:0 6px 18px rgba(6,182,212,0.12)}
+    button:disabled{opacity:0.5;cursor:default}
+    .spin-small{background:linear-gradient(90deg,#10b981,#06b6d4)}
+
+    .result{padding:12px;border-radius:10px;background:rgba(255,255,255,0.02);color:#e6eef6}
+    .legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+    .segment-pill{padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.03);font-size:13px;color:var(--muted)}
+
+    /* Responsive */
+    @media (max-width:880px){
+      .container{grid-template-columns:1fr;grid-auto-rows:auto}
+      .wheel-stage{width:360px;height:360px}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>Spinning Wheel — Demo</h1>
+      <p>Click <strong>Spin</strong> and watch the wheel rotate. The pointer at the top indicates the winning slice.</p>
+      <div class="wheel-wrap">
+        <div class="pointer" aria-hidden></div>
+        <div class="wheel-stage">
+          <canvas id="wheel" width="1024" height="1024" role="img" aria-label="Prize wheel"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <aside class="card">
+      <div class="controls">
+        <div class="result" id="result">Ready — press <strong>Spin</strong></div>
+        <button id="spinBtn">Spin</button>
+        <div style="display:flex;gap:8px">
+          <button id="quickBtn" class="spin-small">Quick Spin</button>
+          <button id="resetBtn">Reset</button>
+        </div>
+        <div style="margin-top:8px">
+          <label style="display:block;color:var(--muted);font-size:13px;margin-bottom:6px">Segments (comma-separated)</label>
+          <input id="segmentsInput" value="Speed,Stamina,Power,Guts,Wit,Rest,Recreation,Race,Infirmary,Another Spin" style="width:100%;padding:8px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.04);color:#e6eef6" />
+        </div>
+        <div class="legend" id="legend"></div>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    // ------- Setup --------
+    const canvas = document.getElementById('wheel');
+    const ctx = canvas.getContext('2d');
+    let segments = [];
+    const spinBtn = document.getElementById('spinBtn');
+    const quickBtn = document.getElementById('quickBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const resultEl = document.getElementById('result');
+    const segmentsInput = document.getElementById('segmentsInput');
+    const legendEl = document.getElementById('legend');
+
+    let size = Math.min(canvas.width, canvas.height);
+    const cx = canvas.width/2, cy = canvas.height/2, radius = size*0.45;
+
+    // draw wheel from segments array
+    function drawWheel(angle=0){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.save();
+      ctx.translate(cx,cy);
+      ctx.rotate(angle);
+
+      const segCount = segments.length;
+      const arc = (Math.PI*2)/segCount;
+
+      for(let i=0;i<segCount;i++){
+        const start = i*arc;
+        // alternating colors for contrast
+        ctx.beginPath();
+        ctx.moveTo(0,0);
+        ctx.arc(0,0,radius,start,start+arc);
+        ctx.closePath();
+        ctx.fillStyle = i%2===0 ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.02)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // label
+        ctx.save();
+        ctx.rotate(start + arc/2);
+        ctx.translate(radius*0.6,0);
+        ctx.rotate(Math.PI/2);
+        ctx.fillStyle = '#e6eef6';
+        ctx.font = '34px system-ui, Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(segments[i], 0, 0, radius*0.6);
+        ctx.restore();
+      }
+
+      // center circle
+      ctx.beginPath();
+      ctx.arc(0,0,radius*0.18,0,Math.PI*2);
+      ctx.fillStyle = '#071124';
+      ctx.fill();
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    // initialize segments from input
+    function initSegments(){
+      const raw = segmentsInput.value.split(',').map(s=>s.trim()).filter(Boolean);
+      segments = raw.length? raw : ['A','B','C','D'];
+      renderLegend();
+      drawWheel(0);
+    }
+
+    function renderLegend(){
+      legendEl.innerHTML = '';
+      segments.forEach((s,i)=>{
+        const pill = document.createElement('div');
+        pill.className = 'segment-pill';
+        pill.textContent = `${i+1}. ${s}`;
+        legendEl.appendChild(pill);
+      });
+    }
+
+    // easing function for smooth spin
+    function easeOutCubic(t){return 1 - Math.pow(1-t,3)}
+
+    // spin animation: rotate from current to target angle
+    let animating = false;
+    async function spin(options={minRot:3,maxRot:6}){
+      if(animating) return;
+      animating = true;
+      spinBtn.disabled = true;
+      quickBtn.disabled = true;
+
+      // number of full rotations + final offset
+      const rotations = Math.random()*(options.maxRot-options.minRot)+options.minRot;
+      const segCount = segments.length;
+      const targetIndex = Math.floor(Math.random()*segCount);
+
+      // compute target angle so that targetIndex lands at pointer (angle 0)
+      const arc = 360/segCount;
+      const randomOffset = Math.random()*(arc-6) - (arc/2 - 3); // small randomization within segment
+      const targetAngleDeg = rotations*360 + (360 - (targetIndex*arc) - arc/2) + randomOffset;
+
+      const duration = 4200 + Math.random()*1400; // ms
+      const start = performance.now();
+      const startAngle = currentAngle || 0;
+      const targetAngle = startAngle + (targetAngleDeg * Math.PI/180);
+
+      return new Promise(resolve=>{
+        function frame(now){
+          const t = Math.min(1,(now-start)/duration);
+          const eased = easeOutCubic(t);
+          const angle = startAngle + (targetAngle - startAngle)*eased;
+          currentAngle = angle;
+          drawWheel(angle);
+          if(t<1){
+            requestAnimationFrame(frame);
+          } else {
+            animating = false;
+            spinBtn.disabled = false;
+            quickBtn.disabled = false;
+            const finalDeg = (currentAngle * 180/Math.PI) % 360;
+            // compute winning index based on finalDeg
+            const normalized = (360 - (finalDeg) + arc/2) % 360; // align to pointer
+            const winner = Math.floor(normalized / arc) % segCount;
+            resultEl.innerHTML = `<strong>Winner:</strong> ${segments[winner]} (slice ${winner+1})`;
+            resolve({winner, index:winner});
+          }
+        }
+        requestAnimationFrame(frame);
+      });
+    }
+
+    // keep track of angle in radians
+    let currentAngle = 0;
+
+    // events
+    spinBtn.addEventListener('click', ()=>spin({minRot:4,maxRot:7}));
+    quickBtn.addEventListener('click', ()=>spin({minRot:1.5,maxRot:3}));
+    resetBtn.addEventListener('click', ()=>{
+      currentAngle = 0; drawWheel(0); resultEl.textContent='Ready — press Spin';
+    });
+
+    segmentsInput.addEventListener('change', initSegments);
+    segmentsInput.addEventListener('keyup', (e)=>{ if(e.key==='Enter') initSegments(); });
+
+    // initialize on load
+    initSegments();
+
+    // redrawing on resize (keeps canvas crisp by using CSS size vs internal size)
+    window.addEventListener('resize', ()=>{
+      // note: canvas internal size is high-res (1024) so scaling is handled by CSS
+      drawWheel(currentAngle);
+    });
+
+    // accessibility: allow keyboard to trigger spin
+    document.addEventListener('keydown',(e)=>{
+      if(e.key===' ' || e.key==='Enter'){
+        e.preventDefault(); spin({minRot:3,maxRot:6});
+      }
+    });
+  </script>
+</body>
+</html>
