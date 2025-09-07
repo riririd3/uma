@@ -26,7 +26,8 @@
     button{appearance:none;border:0;padding:12px 16px;border-radius:10px;background:linear-gradient(90deg,var(--accent),#7c3aed);color:white;font-weight:600;cursor:pointer;box-shadow:0 6px 18px rgba(6,182,212,0.12)}
     button:disabled{opacity:0.5;cursor:default}
     .result{padding:12px;border-radius:10px;background:rgba(255,255,255,0.02);color:#e6eef6;font-size:18px;font-weight:bold;text-align:center;border:2px solid var(--accent)}
-    .info-text {margin-top: 6px;font-size: 12px;color: var(--muted);text-align: center;opacity: 0.8;}
+    .info-text {margin-top: 10px;padding: 8px 10px;font-size: 13px;line-height: 1.4;color: #cbd5e1;background: rgba(255, 255, 255, 0.03);border-left: 3px solid var(--accent);border-radius: 6px;}
+
     
 
     /* Responsive */
@@ -50,10 +51,13 @@
 
     <aside class="card">
       <div class="controls">
-        <div class="result" id="result">Ready — press <strong>Spin</strong></div>
+        <div class="result" id="result">Press <strong>Spin</strong></div>
         <button id="spinBtn">Spin</button>
         <button id="resetBtn">Reset</button>
-        <p id="info" class="info-text">Info: If you get "Race" before "Run in Junior Make Debut" goal, then spin again. If you get "Infirmary" when your Uma in good condition, then spin again.</p>
+        <p id="info" class="info-text">ℹ️ <strong>Tip:</strong>  
+  If you get <em>"Race"</em> before <em>"Run in Junior Make Debut"</em>, spin again.  
+  If you get <em>"Infirmary"</em> but your Uma is healthy, spin again.
+</p>
       </div>
 
       
@@ -64,7 +68,7 @@
   <script>
     const canvas = document.getElementById('wheel');
     const ctx = canvas.getContext('2d');
-    let segments = ["Speed","Stamina","Power","Guts","Wit","Rest","Recreation","Race"];
+    let segments = ["Speed","Stamina","Power","Guts","Wit","Rest","Recreation","Infirmary","Race"];
     const spinBtn = document.getElementById('spinBtn');
     const resetBtn = document.getElementById('resetBtn');
     const resultEl = document.getElementById('result');
@@ -130,7 +134,8 @@
       const arc = 360/segCount;
       const randomOffset = Math.random()*(arc-6) - (arc/2 - 3);
       // Adjust targetAngle so the winning slice aligns with TOP, not RIGHT
-      const targetAngleDeg = rotations*360 + (270 - (targetIndex*arc) - arc/2) + randomOffset;
+      const targetAngleDeg = rotations * 360 + (270 - targetIndex * arc) + randomOffset;
+
 
       const duration = 4200 + Math.random()*1400;
       const start = performance.now();
@@ -151,9 +156,10 @@
             spinBtn.disabled = false;
             const finalDeg = (currentAngle * 180/Math.PI) % 360;
             // For TOP pointer, offset calculation changes
-            const normalized = (270 - finalDeg + arc/2 + 360) % 360;
+            const normalized = (270 - finalDeg + 360) % 360;
+
             const winner = Math.floor(normalized / arc) % segCount;
-            resultEl.innerHTML = `🎉 <strong>Winner:</strong> ${segments[winner]} 🎉`;
+            resultEl.innerHTML = `${segments[winner]}`;
             resolve({winner, index:winner});
           }
         }
