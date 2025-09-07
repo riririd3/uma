@@ -19,17 +19,13 @@
     canvas#wheel{width:100%;height:100%;border-radius:50%;display:block}
 
     /* Pointer */
-    .pointer{position:absolute;top:12px;left:50%;transform:translateX(-50%);transform:translateY(50%);width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-bottom:30px solid var(--accent);filter:drop-shadow(0 4px 8px rgba(2,6,23,0.6))}
+    .pointer{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-top:30px solid var(--accent);filter:drop-shadow(0 4px 8px rgba(2,6,23,0.6))}
 
     /* Controls */
     .controls{display:flex;flex-direction:column;gap:12px}
     button{appearance:none;border:0;padding:12px 16px;border-radius:10px;background:linear-gradient(90deg,var(--accent),#7c3aed);color:white;font-weight:600;cursor:pointer;box-shadow:0 6px 18px rgba(6,182,212,0.12)}
     button:disabled{opacity:0.5;cursor:default}
-    .spin-small{background:linear-gradient(90deg,#10b981,#06b6d4)}
-
-    .result{padding:12px;border-radius:10px;background:rgba(255,255,255,0.02);color:#e6eef6}
-    .legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-    .segment-pill{padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.03);font-size:13px;color:var(--muted)}
+    .result{padding:12px;border-radius:10px;background:rgba(255,255,255,0.02);color:#e6eef6;font-size:18px;font-weight:bold;text-align:center;border:2px solid var(--accent)}
 
     /* Responsive */
     @media (max-width:880px){
@@ -41,8 +37,7 @@
 <body>
   <div class="container">
     <div class="card">
-      <h1>Uma Spinning Wheel</h1>
-      <p>Click <strong>Spin</strong> and watch the wheel rotate. The pointer at the top indicates the winning slice.</p>
+      <h1>Uma Spinning Wheel Challenge</h1>
       <div class="wheel-wrap">
         <div class="pointer" aria-hidden></div>
         <div class="wheel-stage">
@@ -53,37 +48,24 @@
 
     <aside class="card">
       <div class="controls">
-        <div class="result" id="result">Ready — press <strong>Spin</strong></div>
+        <div class="result" id="result"><strong>Spin</strong></div>
         <button id="spinBtn">Spin</button>
-        <div style="display:flex;gap:8px">
-          <button id="quickBtn" class="spin-small">Quick Spin</button>
-          <button id="resetBtn">Reset</button>
-        </div>
-        <div style="margin-top:8px">
-          <label style="display:block;color:var(--muted);font-size:13px;margin-bottom:6px">Segments (comma-separated)</label>
-          <input id="segmentsInput" value="Speed,Stamina,Power,Guts,Wit,Rest,Recreation,Race,Infirmary,Another Spin" style="width:100%;padding:8px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.04);color:#e6eef6" />
-        </div>
-        <div class="legend" id="legend"></div>
+        <button id="resetBtn">Reset</button>
       </div>
     </aside>
   </div>
 
   <script>
-    // ------- Setup --------
     const canvas = document.getElementById('wheel');
     const ctx = canvas.getContext('2d');
-    let segments = [];
+    let segments = ["Speed","Stamina","Power","Guts","Wit","Rest","Recreation","Race"];
     const spinBtn = document.getElementById('spinBtn');
-    const quickBtn = document.getElementById('quickBtn');
     const resetBtn = document.getElementById('resetBtn');
     const resultEl = document.getElementById('result');
-    const segmentsInput = document.getElementById('segmentsInput');
-    const legendEl = document.getElementById('legend');
 
     let size = Math.min(canvas.width, canvas.height);
     const cx = canvas.width/2, cy = canvas.height/2, radius = size*0.45;
 
-    // draw wheel from segments array
     function drawWheel(angle=0){
       ctx.clearRect(0,0,canvas.width,canvas.height);
       ctx.save();
@@ -95,7 +77,6 @@
 
       for(let i=0;i<segCount;i++){
         const start = i*arc;
-        // alternating colors for contrast
         ctx.beginPath();
         ctx.moveTo(0,0);
         ctx.arc(0,0,radius,start,start+arc);
@@ -106,7 +87,6 @@
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // label
         ctx.save();
         ctx.rotate(start + arc/2);
         ctx.translate(radius*0.6,0);
@@ -118,7 +98,6 @@
         ctx.restore();
       }
 
-      // center circle
       ctx.beginPath();
       ctx.arc(0,0,radius*0.18,0,Math.PI*2);
       ctx.fillStyle = '#071124';
@@ -130,46 +109,24 @@
       ctx.restore();
     }
 
-    // initialize segments from input
-    function initSegments(){
-      const raw = segmentsInput.value.split(',').map(s=>s.trim()).filter(Boolean);
-      segments = raw.length? raw : ['A','B','C','D'];
-      renderLegend();
-      drawWheel(0);
-    }
-
-    function renderLegend(){
-      legendEl.innerHTML = '';
-      segments.forEach((s,i)=>{
-        const pill = document.createElement('div');
-        pill.className = 'segment-pill';
-        pill.textContent = `${i+1}. ${s}`;
-        legendEl.appendChild(pill);
-      });
-    }
-
-    // easing function for smooth spin
     function easeOutCubic(t){return 1 - Math.pow(1-t,3)}
 
-    // spin animation: rotate from current to target angle
     let animating = false;
     async function spin(options={minRot:3,maxRot:6}){
       if(animating) return;
       animating = true;
       spinBtn.disabled = true;
-      quickBtn.disabled = true;
 
-      // number of full rotations + final offset
       const rotations = Math.random()*(options.maxRot-options.minRot)+options.minRot;
       const segCount = segments.length;
       const targetIndex = Math.floor(Math.random()*segCount);
 
-      // compute target angle so that targetIndex lands at pointer (angle 0)
       const arc = 360/segCount;
-      const randomOffset = Math.random()*(arc-6) - (arc/2 - 3); // small randomization within segment
-      const targetAngleDeg = rotations*360 + (360 - (targetIndex*arc) - arc/2) + randomOffset;
+      const randomOffset = Math.random()*(arc-6) - (arc/2 - 3);
+      // Adjust targetAngle so the winning slice aligns with TOP, not RIGHT
+      const targetAngleDeg = rotations*360 + (270 - (targetIndex*arc) - arc/2) + randomOffset;
 
-      const duration = 4200 + Math.random()*1400; // ms
+      const duration = 4200 + Math.random()*1400;
       const start = performance.now();
       const startAngle = currentAngle || 0;
       const targetAngle = startAngle + (targetAngleDeg * Math.PI/180);
@@ -186,12 +143,11 @@
           } else {
             animating = false;
             spinBtn.disabled = false;
-            quickBtn.disabled = false;
             const finalDeg = (currentAngle * 180/Math.PI) % 360;
-            // compute winning index based on finalDeg
-            const normalized = (360 - (finalDeg) + arc/2) % 360; // align to pointer
+            // For TOP pointer, offset calculation changes
+            const normalized = (270 - finalDeg + arc/2 + 360) % 360;
             const winner = Math.floor(normalized / arc) % segCount;
-            resultEl.innerHTML = `<strong>Winner:</strong> ${segments[winner]} (slice ${winner+1})`;
+            resultEl.innerHTML = `🎉 <strong>Winner:</strong> ${segments[winner]} 🎉`;
             resolve({winner, index:winner});
           }
         }
@@ -199,34 +155,16 @@
       });
     }
 
-    // keep track of angle in radians
     let currentAngle = 0;
-
-    // events
     spinBtn.addEventListener('click', ()=>spin({minRot:4,maxRot:7}));
-    quickBtn.addEventListener('click', ()=>spin({minRot:1.5,maxRot:3}));
     resetBtn.addEventListener('click', ()=>{
       currentAngle = 0; drawWheel(0); resultEl.textContent='Ready — press Spin';
     });
 
-    segmentsInput.addEventListener('change', initSegments);
-    segmentsInput.addEventListener('keyup', (e)=>{ if(e.key==='Enter') initSegments(); });
-
-    // initialize on load
-    initSegments();
-
-    // redrawing on resize (keeps canvas crisp by using CSS size vs internal size)
-    window.addEventListener('resize', ()=>{
-      // note: canvas internal size is high-res (1024) so scaling is handled by CSS
-      drawWheel(currentAngle);
-    });
-
-    // accessibility: allow keyboard to trigger spin
-    document.addEventListener('keydown',(e)=>{
-      if(e.key===' ' || e.key==='Enter'){
-        e.preventDefault(); spin({minRot:3,maxRot:6});
-      }
-    });
+    drawWheel();
+    window.addEventListener('resize', ()=>drawWheel(currentAngle));
   </script>
+<p>*if you get "race" before maiden race, you can spin again</p>
 </body>
-</html>
+  </html>
+  
