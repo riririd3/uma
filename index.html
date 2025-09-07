@@ -68,7 +68,7 @@
   <script>
     const canvas = document.getElementById('wheel');
     const ctx = canvas.getContext('2d');
-    let segments = ["Speed","Stamina","Power","Guts","Wit","Rest","Recreation","Race","Infirmary"];
+    let segments = ["Speed","Stamina","Power","Guts","Wit","Rest","Recreation","Race","Try Again","Infirmary"];
     const spinBtn = document.getElementById('spinBtn');
     const resetBtn = document.getElementById('resetBtn');
     const resultEl = document.getElementById('result');
@@ -137,7 +137,7 @@
       const targetAngleDeg = rotations * 360 + (270 - targetIndex * arc) + randomOffset;
 
 
-      const duration = 4200 + Math.random()*1400;
+      const duration = 1200 + Math.random()*1400;
       const start = performance.now();
       const startAngle = currentAngle || 0;
       const targetAngle = startAngle + (targetAngleDeg * Math.PI/180);
